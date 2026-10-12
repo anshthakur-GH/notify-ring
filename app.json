@@ -25,10 +25,17 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e1543c3e-69d8-4856-8a38-4a63d563d808"
+      }
+    },
+    "owner": "anshufzlob"
   }
 }
