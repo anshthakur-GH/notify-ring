@@ -55,15 +55,41 @@ Early build. See [Issues](../../issues) / commit history for current progress.
 
 ## Setup (dev)
 
+**Option A — build locally** (needs Android Studio + a JDK installed):
 ```bash
 npm install
-npx expo prebuild
-npx expo run:android
+npm run prebuild
+npm run android
 ```
 
-Requires a physical Android device or emulator with Google Play services
-(notification listener permission prompts don't work reliably on bare AVDs
-without it).
+**Option B — build in the cloud with EAS** (no local Android SDK required):
+```bash
+npm install -g eas-cli
+eas login
+eas build --platform android --profile development
+```
+Install the resulting APK on your phone, then run `npx expo start --dev-client`
+to connect.
+
+Either way you need a physical Android device for real testing — notification
+listener permission prompts and full-screen alarm behavior don't reliably
+emulate on a bare AVD.
+
+## Why it's small / low-RAM by design
+
+- Notification capture and the threshold timer run entirely in native Kotlin
+  (`NotificationListenerService` + `AlarmManager`), not JS — the React Native
+  JS engine doesn't even need to be running for the core feature to work.
+- No polling anywhere: the listener only wakes on an actual notification
+  event, and the timer is OS-scheduled, not a JS `setInterval`.
+- Minimal JS dependency tree: no navigation library, no state management
+  library, no UI kit, no analytics. Just Expo core + React Native core
+  components.
+- R8/ProGuard code shrinking and resource shrinking are enabled for release
+  builds via `expo-build-properties` (build-time only, adds nothing to the
+  runtime).
+- Local data is three tiny SQLite rows per in-flight notification
+  (package name, timestamp, fire time) — auto-deleted the moment it resolves.
 
 ## Non-goals
 
