@@ -1,9 +1,9 @@
 package com.anshthakur.notifyring.listener
 
-import android.app.PowerManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.PowerManager
 
 /**
  * Fired by AlarmManager when a watched notification's threshold elapses.
