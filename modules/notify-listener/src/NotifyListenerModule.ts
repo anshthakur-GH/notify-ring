@@ -7,6 +7,7 @@ declare class NotifyListenerModule extends NativeModule<{}> {
 
   isIgnoringBatteryOptimizations(): boolean;
   requestIgnoreBatteryOptimizations(): void;
+  openAutoStartSettings(): void;
 
   canScheduleExactAlarms(): boolean;
   openExactAlarmSettings(): void;

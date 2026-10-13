@@ -15,6 +15,14 @@ class NotifyListenerModule : Module() {
   private val context get() = requireNotNull(appContext.reactContext)
   private val db get() = NotifyRingDb.get(context)
 
+  private fun openAppDetailsSettings() {
+    val intent = Intent(
+      Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+      Uri.parse("package:${context.packageName}")
+    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+  }
+
   override fun definition() = ModuleDefinition {
     Name("NotifyListener")
 
@@ -39,11 +47,54 @@ class NotifyListenerModule : Module() {
     }
 
     Function("requestIgnoreBatteryOptimizations") {
-      val intent = Intent(
+      // Stock Android dialog. Several OEMs (Vivo/FuntouchOS, some MIUI/ColorOS
+      // builds) don't ship this screen at all, so the intent silently fails
+      // to resolve - fall back to the app's details page, which always exists,
+      // so the button never does visibly nothing.
+      val directIntent = Intent(
         Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
         Uri.parse("package:${context.packageName}")
       ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      context.startActivity(intent)
+
+      if (directIntent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(directIntent)
+      } else {
+        openAppDetailsSettings()
+      }
+    }
+
+    // OEM battery managers (Vivo iManager, Oppo/Realme/OnePlus ColorOS,
+    // Xiaomi MIUI) kill background services unless the app is separately
+    // whitelisted for "autostart" - this is outside stock Android's API,
+    // each OEM has its own undocumented settings screen.
+    Function("openAutoStartSettings") {
+      val candidates = listOf(
+        "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+        "com.vivo.abe" to "com.vivo.abe.PowerManagerActivity",
+        "com.iqoo.powersaving" to "com.iqoo.powersaving.PowerSavingManagerActivity",
+        "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+        "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+        "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity"
+      )
+
+      val launched = candidates.any { (pkg, cls) ->
+        try {
+          val intent = Intent().apply {
+            component = android.content.ComponentName(pkg, cls)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          }
+          if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+            true
+          } else {
+            false
+          }
+        } catch (_: Exception) {
+          false
+        }
+      }
+
+      if (!launched) openAppDetailsSettings()
     }
 
     Function("canScheduleExactAlarms") {

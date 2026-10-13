@@ -20,6 +20,12 @@ import NotifyListener, { InstalledApp, WatchedApp } from './modules/notify-liste
 const THRESHOLD_OPTIONS_MIN = [1, 2, 3, 5, 10, 15, 30];
 const DEFAULT_THRESHOLD_MIN = 2;
 
+const NAVY = '#000313';
+const CARD = '#10112A';
+const ACCENT = '#3B82F6';
+const BORDER = '#232447';
+const TEXT_MUTED = '#8C8FB5';
+
 type PermissionState = {
   notificationAccess: boolean;
   batteryExempt: boolean;
@@ -72,11 +78,10 @@ function PermissionBanner({ state }: { state: PermissionState }) {
   ];
 
   const missing = items.filter((i) => !i.ok);
-  if (missing.length === 0) return null;
 
   return (
     <View style={styles.banner}>
-      <Text style={styles.bannerTitle}>Setup required</Text>
+      <Text style={styles.bannerTitle}>Setup</Text>
       <Text style={styles.bannerSubtitle}>
         Without these, watched apps won't reliably ring you.
       </Text>
@@ -85,6 +90,24 @@ function PermissionBanner({ state }: { state: PermissionState }) {
           <Text style={styles.bannerButtonText}>Grant: {item.label}</Text>
         </Pressable>
       ))}
+      {missing.length === 0 && (
+        <Text style={styles.bannerAllSet}>All core permissions granted</Text>
+      )}
+
+      {/* OEM battery managers (Vivo/Oppo/Xiaomi) kill background apps unless
+          separately whitelisted - no API exists to detect this state, so this
+          stays visible as a manual action rather than a checkable item. */}
+      <View style={styles.bannerDivider} />
+      <Text style={styles.bannerSubtitle}>
+        On Vivo/iQOO, also allow autostart - otherwise the ringer can get
+        killed in the background.
+      </Text>
+      <Pressable
+        style={[styles.bannerButton, styles.bannerButtonSecondary]}
+        onPress={() => NotifyListener.openAutoStartSettings()}
+      >
+        <Text style={styles.bannerButtonText}>Open autostart settings</Text>
+      </Pressable>
     </View>
   );
 }
@@ -196,7 +219,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor={NAVY} />
       <Text style={styles.header}>NotifyRing</Text>
       <Text style={styles.subheader}>Pick apps to watch. Unopened past the threshold rings you.</Text>
 
@@ -205,6 +228,7 @@ export default function App() {
       <TextInput
         style={styles.search}
         placeholder="Search apps"
+        placeholderTextColor={TEXT_MUTED}
         value={query}
         onChangeText={setQuery}
         autoCorrect={false}
@@ -235,7 +259,12 @@ export default function App() {
                   </Text>
                 )}
               </Pressable>
-              <Switch value={isWatched} onValueChange={(v) => toggleWatch(item, v)} />
+              <Switch
+                value={isWatched}
+                onValueChange={(v) => toggleWatch(item, v)}
+                trackColor={{ false: BORDER, true: ACCENT }}
+                thumbColor="#fff"
+              />
             </View>
           );
         }}
@@ -252,27 +281,32 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
-  header: { fontSize: 26, fontWeight: '700', marginTop: 12 },
-  subheader: { fontSize: 13, color: '#666', marginBottom: 12 },
-  banner: { backgroundColor: '#FFF4E5', borderRadius: 12, padding: 12, marginBottom: 12 },
-  bannerTitle: { fontWeight: '700', fontSize: 14, marginBottom: 2 },
-  bannerSubtitle: { fontSize: 12, color: '#555', marginBottom: 8 },
+  safeArea: { flex: 1, backgroundColor: NAVY, paddingHorizontal: 16 },
+  header: { fontSize: 26, fontWeight: '700', marginTop: 12, color: '#fff' },
+  subheader: { fontSize: 13, color: TEXT_MUTED, marginBottom: 12 },
+  banner: { backgroundColor: CARD, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: BORDER },
+  bannerTitle: { fontWeight: '700', fontSize: 14, marginBottom: 2, color: '#fff' },
+  bannerSubtitle: { fontSize: 12, color: TEXT_MUTED, marginBottom: 8 },
+  bannerAllSet: { fontSize: 12, color: '#4ADE80', fontWeight: '600' },
+  bannerDivider: { height: 1, backgroundColor: BORDER, marginVertical: 10 },
   bannerButton: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: ACCENT,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
     marginTop: 6,
   },
+  bannerButtonSecondary: { backgroundColor: '#1F2050' },
   bannerButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   search: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: BORDER,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 8,
+    color: '#fff',
+    backgroundColor: CARD,
   },
   row: {
     flexDirection: 'row',
@@ -280,28 +314,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: BORDER,
   },
   rowLabel: { flex: 1, paddingRight: 12 },
-  rowTitle: { fontSize: 15, fontWeight: '500' },
-  rowSubtitle: { fontSize: 12, color: '#888', marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '700' },
-  modalSubtitle: { fontSize: 13, color: '#666', marginTop: 4, marginBottom: 12 },
+  rowTitle: { fontSize: 15, fontWeight: '500', color: '#fff' },
+  rowSubtitle: { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 },
+  modalCard: { backgroundColor: CARD, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  modalSubtitle: { fontSize: 13, color: TEXT_MUTED, marginTop: 4, marginBottom: 12 },
   optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   optionChip: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#1F2050',
   },
-  optionChipSelected: { backgroundColor: '#1A1A2E' },
-  optionChipText: { fontSize: 13, color: '#333' },
+  optionChipSelected: { backgroundColor: ACCENT },
+  optionChipText: { fontSize: 13, color: '#D0D2F0' },
   optionChipTextSelected: { color: '#fff', fontWeight: '600' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20, gap: 12 },
   modalCancel: { paddingVertical: 10, paddingHorizontal: 16 },
-  modalCancelText: { color: '#666', fontWeight: '600' },
-  modalSave: { backgroundColor: '#1A1A2E', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+  modalCancelText: { color: TEXT_MUTED, fontWeight: '600' },
+  modalSave: { backgroundColor: ACCENT, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
   modalSaveText: { color: '#fff', fontWeight: '600' },
 });
