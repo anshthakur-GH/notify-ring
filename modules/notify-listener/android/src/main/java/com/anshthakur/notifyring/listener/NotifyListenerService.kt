@@ -1,20 +1,54 @@
 package com.anshthakur.notifyring.listener
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.core.content.ContextCompat
 
 /**
  * Pure native listener: no JS/React Native dependency at runtime. Android
  * can bind this service without the app's JS engine running at all, so all
  * watch-list/threshold reads and timer scheduling must stay native.
+ *
+ * Also owns the screen-off catch-up: ACTION_SCREEN_OFF can't be declared in
+ * the manifest (implicit-broadcast restriction since Android 8), so it's
+ * registered here instead, in the one component that's alive the whole time
+ * notification access is granted.
  */
 class NotifyListenerService : NotificationListenerService() {
 
   private lateinit var db: NotifyRingDb
 
+  private val screenOffReceiver = object : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+      db.getDeferredPending().forEach { pending ->
+        db.markTriggered(pending.notifKey)
+        RingLauncher.launch(context, pending)
+      }
+    }
+  }
+
   override fun onCreate() {
     super.onCreate()
     db = NotifyRingDb.get(this)
+    ContextCompat.registerReceiver(
+      this,
+      screenOffReceiver,
+      IntentFilter(Intent.ACTION_SCREEN_OFF),
+      ContextCompat.RECEIVER_NOT_EXPORTED
+    )
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    try {
+      unregisterReceiver(screenOffReceiver)
+    } catch (_: IllegalArgumentException) {
+      // not registered - nothing to do
+    }
   }
 
   override fun onListenerConnected() {

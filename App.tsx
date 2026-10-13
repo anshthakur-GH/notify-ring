@@ -99,8 +99,9 @@ function PermissionBanner({ state }: { state: PermissionState }) {
           stays visible as a manual action rather than a checkable item. */}
       <View style={styles.bannerDivider} />
       <Text style={styles.bannerSubtitle}>
-        On Vivo/iQOO, also allow autostart - otherwise the ringer can get
-        killed in the background.
+        On Vivo/iQOO, also allow autostart, and long-press NotifyRing in your
+        recent apps list and tap the lock icon - otherwise the ringer can
+        still get killed in the background.
       </Text>
       <Pressable
         style={[styles.bannerButton, styles.bannerButtonSecondary]}

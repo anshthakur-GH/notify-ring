@@ -30,7 +30,8 @@ class NotifyRingDb private constructor(context: Context) :
         package_name TEXT NOT NULL,
         posted_at INTEGER NOT NULL,
         fire_at INTEGER NOT NULL,
-        alarm_triggered INTEGER NOT NULL DEFAULT 0
+        alarm_triggered INTEGER NOT NULL DEFAULT 0,
+        deferred INTEGER NOT NULL DEFAULT 0
       )
       """.trimIndent()
     )
@@ -100,6 +101,7 @@ class NotifyRingDb private constructor(context: Context) :
       put("posted_at", postedAt)
       put("fire_at", fireAt)
       put("alarm_triggered", 0)
+      put("deferred", 0)
     }
     writableDatabase.insertWithOnConflict(
       "pending_notifications", null, values, SQLiteDatabase.CONFLICT_REPLACE
@@ -133,17 +135,27 @@ class NotifyRingDb private constructor(context: Context) :
     writableDatabase.update("pending_notifications", values, "notif_key = ?", arrayOf(notifKey))
   }
 
+  fun markDeferred(notifKey: String) {
+    val values = ContentValues().apply { put("deferred", 1) }
+    writableDatabase.update("pending_notifications", values, "notif_key = ?", arrayOf(notifKey))
+  }
+
+  /** Thresholds that elapsed while the screen was on - ring these now that it's off. */
+  fun getDeferredPending(): List<PendingNotification> =
+    getAllPending().filter { it.deferred && !it.alarmTriggered }
+
   private fun android.database.Cursor.toPendingNotification() = PendingNotification(
     notifKey = getString(getColumnIndexOrThrow("notif_key")),
     packageName = getString(getColumnIndexOrThrow("package_name")),
     postedAt = getLong(getColumnIndexOrThrow("posted_at")),
     fireAt = getLong(getColumnIndexOrThrow("fire_at")),
-    alarmTriggered = getInt(getColumnIndexOrThrow("alarm_triggered")) == 1
+    alarmTriggered = getInt(getColumnIndexOrThrow("alarm_triggered")) == 1,
+    deferred = getInt(getColumnIndexOrThrow("deferred")) == 1
   )
 
   companion object {
     private const val DB_NAME = "notify_ring.db"
-    private const val DB_VERSION = 1
+    private const val DB_VERSION = 2
 
     @Volatile private var instance: NotifyRingDb? = null
 
@@ -165,5 +177,6 @@ data class PendingNotification(
   val packageName: String,
   val postedAt: Long,
   val fireAt: Long,
-  val alarmTriggered: Boolean
+  val alarmTriggered: Boolean,
+  val deferred: Boolean = false
 )
